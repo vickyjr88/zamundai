@@ -1,0 +1,63 @@
+services:
+  agency-db:
+    image: postgres:15-alpine
+    container_name: agency-db
+    env_file:
+      - ./agency-api/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  agency-redis:
+    image: redis:alpine
+    container_name: agency-redis
+    ports:
+      - "6379:6379"
+
+  agency-api:
+    build:
+      context: ./agency-api
+      dockerfile: Dockerfile
+    container_name: agency-api
+    depends_on:
+      - agency-db
+      - agency-redis
+      - agency-openclaw
+    env_file:
+      - ./agency-api/.env
+    environment:
+      OPENCLAW_API_URL: http://agency-openclaw:18789
+      OPENCLAW_GATEWAY_IDENTITY_PATH: /app/.openclaw/device.json
+    volumes:
+      - agency_api_openclaw:/app/.openclaw
+    ports:
+      - "6100:6100"
+
+  agency-ui:
+    build:
+      context: ./agency-ui
+      dockerfile: Dockerfile
+    container_name: agency-ui
+    depends_on:
+      - agency-api
+    env_file:
+      - ./agency-api/.env
+    ports:
+      - "6001:6001"
+
+  agency-openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: agency-openclaw
+    env_file:
+      - ./agency-api/.env
+    volumes:
+      - agency_openclaw_data:/home/node/.openclaw
+      - ./skills:/home/node/.openclaw/workspace/skills
+    ports:
+      - "${OPENCLAW_HOST_PORT:-18790}:18789"
+
+volumes:
+  postgres_data:
+  agency_api_openclaw:
+  agency_openclaw_data:
