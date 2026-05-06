@@ -62,12 +62,10 @@ export default function ChatPage() {
     const value = e.target.value;
     setInput(value);
 
-    // Auto-resize textarea
     const el = e.target;
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 128) + 'px';
 
-    // Detect slash command at end of input
     const slashMatch = value.match(/(\/\S*)$/);
     if (slashMatch) {
       setSlashFilter(slashMatch[1]);
@@ -80,7 +78,6 @@ export default function ChatPage() {
 
   const selectSlashCommand = useCallback(
     (cmd: string) => {
-      // Replace trailing /... with selected command
       const replaced = input.replace(/(\/\S*)$/, cmd);
       setInput(replaced !== input ? replaced : cmd);
       setShowSlashMenu(false);
@@ -101,14 +98,12 @@ export default function ChatPage() {
 
     const ext = file.name.split('.').pop()?.toLowerCase();
 
-    // Plain text formats — read directly in the browser
     if (ext === 'txt' || ext === 'md' || ext === 'csv') {
       const text = await file.text();
       setAttachment({ name: file.name, text });
       return;
     }
 
-    // PDF / DOCX — send to backend for extraction
     if (ext === 'pdf' || ext === 'docx') {
       setUploading(true);
       try {
@@ -125,6 +120,31 @@ export default function ChatPage() {
     }
 
     alert('Supported formats: PDF, DOCX, TXT, MD, CSV');
+  };
+
+  const waitForJobCompletion = async (jobId: string): Promise<JobResultResponse> => {
+    const deadline = Date.now() + JOB_POLL_TIMEOUT_MS;
+
+    while (Date.now() < deadline) {
+      const job = await api.get<JobResultResponse>(`/jobs/${jobId}`);
+      const status = job.data.status;
+
+      if (status === 'PENDING') {
+        setJobStatusText('Queued...');
+      }
+
+      if (status === 'RUNNING') {
+        setJobStatusText('Working...');
+      }
+
+      if (status === 'COMPLETED' || status === 'FAILED') {
+        return job.data;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS));
+    }
+
+    throw new Error('Job timed out');
   };
 
   const handleSend = async () => {
@@ -193,31 +213,6 @@ export default function ChatPage() {
     }
   };
 
-  const waitForJobCompletion = async (jobId: string): Promise<JobResultResponse> => {
-    const deadline = Date.now() + JOB_POLL_TIMEOUT_MS;
-
-    while (Date.now() < deadline) {
-      const job = await api.get<JobResultResponse>(`/jobs/${jobId}`);
-      const status = job.data.status;
-
-      if (status === 'PENDING') {
-        setJobStatusText('Queued...');
-      }
-
-      if (status === 'RUNNING') {
-        setJobStatusText('Working...');
-      }
-
-      if (status === 'COMPLETED' || status === 'FAILED') {
-        return job.data;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS));
-    }
-
-    throw new Error('Job timed out');
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Escape') {
       setShowSlashMenu(false);
@@ -234,7 +229,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="border-b border-gray-800 px-6 py-4 flex-shrink-0">
         <h1 className="text-white font-semibold text-base">AI Assistant</h1>
         <p className="text-gray-500 text-xs mt-0.5">
@@ -242,7 +236,6 @@ export default function ChatPage() {
         </p>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -296,9 +289,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area */}
       <div className="border-t border-gray-800 p-4 flex-shrink-0">
-        {/* Attachment pill */}
         {attachment && (
           <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 mb-2 text-sm text-gray-300">
             <Paperclip size={13} className="text-blue-400 flex-shrink-0" />
@@ -313,7 +304,6 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Slash command menu */}
         <div className="relative">
           {showSlashMenu && filteredCommands.length > 0 && (
             <div className="absolute bottom-full mb-2 left-0 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden z-10 w-full max-w-md">
@@ -336,7 +326,6 @@ export default function ChatPage() {
             </div>
           )}
 
-          {/* Composer */}
           <div className="flex items-end gap-2 bg-gray-800 rounded-2xl border border-gray-700 px-3 py-2 focus-within:border-gray-600 transition-colors">
             <button
               onClick={() => fileInputRef.current?.click()}

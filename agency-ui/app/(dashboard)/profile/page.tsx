@@ -6,6 +6,7 @@ import api from '@/lib/api';
 
 type UserProfile = {
   id: string;
+  name?: string;
   email: string;
   mobileNumber: string;
   creditBalance: number;
@@ -83,6 +84,7 @@ export default function ProfilePage() {
           </h2>
 
           <div className="space-y-5">
+            <Field icon={<User size={14} />} label="Full Name" value={profile?.name} />
             <Field icon={<Mail size={14} />} label="Email" value={profile?.email} />
             <Field icon={<Phone size={14} />} label="Mobile Number" value={profile?.mobileNumber} />
             <Field

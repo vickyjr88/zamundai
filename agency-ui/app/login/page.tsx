@@ -21,7 +21,7 @@ export default function LoginPage() {
     try {
       const response = await api.post('/auth/login', { identifier, password });
       Cookies.set('token', response.data.access_token, { expires: 1 });
-      router.push('/');
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid credentials');
     } finally {

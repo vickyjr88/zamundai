@@ -6,7 +6,7 @@ import { MessageSquare, User, LogOut, Zap } from 'lucide-react';
 import Cookies from 'js-cookie';
 
 const NAV_ITEMS = [
-  { href: '/', icon: MessageSquare, label: 'Chat' },
+  { href: '/dashboard', icon: MessageSquare, label: 'Chat' },
   { href: '/profile', icon: User, label: 'Profile & Credits' },
 ];
 

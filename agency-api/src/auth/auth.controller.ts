@@ -8,6 +8,10 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() userData: any) {
+    if (!userData.name || !String(userData.name).trim()) {
+      throw new BadRequestException('Name is required');
+    }
+
     if (!userData.mobileNumber) {
       throw new BadRequestException('Mobile number is required');
     }

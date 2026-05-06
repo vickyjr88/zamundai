@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -12,6 +12,10 @@ export class UsersService {
   ) {}
 
   async create(userData: Partial<User>): Promise<User> {
+    if (!userData.name || !String(userData.name).trim()) {
+      throw new BadRequestException('Name is required');
+    }
+
     const existing = await this.userRepository.findOne({
       where: [{ email: userData.email }, { mobileNumber: userData.mobileNumber }],
     });

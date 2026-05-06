@@ -7,6 +7,7 @@ import api from '@/lib/api';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     mobileNumber: '',
     password: '',
@@ -42,6 +43,18 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Full Name</label>
+            <input
+              type="text"
+              required
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Jane Doe"
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
             <input

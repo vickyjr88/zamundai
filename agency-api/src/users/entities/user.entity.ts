@@ -10,6 +10,9 @@ export class User {
   @Column({ unique: true, nullable: true })
   telegramId: string;
 
+  @Column({ nullable: true })
+  name: string;
+
   @Column({ unique: true })
   mobileNumber: string;
 
