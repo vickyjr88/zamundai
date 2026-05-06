@@ -7,6 +7,7 @@ import { PaymentTransaction } from '../payments/entities/payment-transaction.ent
 import { OpenClawSpendEvent } from '../jobs/entities/openclaw-spend.entity';
 import { ChatMessage } from '../chat/entities/chat-message.entity';
 import { UsersService } from '../users/users.service';
+import { JobStatus } from '../jobs/entities/agent-job.entity';
 
 @Injectable()
 export class AdminService {
@@ -38,7 +39,7 @@ export class AdminService {
       this.usersRepository.count(),
       this.usersRepository.count({ where: { isAdmin: true } }),
       this.jobsRepository.count(),
-      this.jobsRepository.count({ where: [{ status: 'PENDING' }, { status: 'RUNNING' }] }),
+      this.jobsRepository.count({ where: [{ status: JobStatus.PENDING }, { status: JobStatus.RUNNING }] }),
       this.paymentsRepository.count(),
       this.paymentsRepository.count({ where: { status: 'SUCCESS' } }),
       this.spendRepository.count(),
