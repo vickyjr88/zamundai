@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { MessageSquare, User, LogOut, Zap } from 'lucide-react';
 import Cookies from 'js-cookie';
 
@@ -12,11 +12,10 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
 
   const handleLogout = () => {
-    Cookies.remove('token');
-    router.push('/login');
+    Cookies.remove('token', { path: '/' });
+    window.location.assign('/login');
   };
 
   return (

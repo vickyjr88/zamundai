@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import Cookies from 'js-cookie';
@@ -11,17 +10,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
       const response = await api.post('/auth/login', { identifier, password });
-      Cookies.set('token', response.data.access_token, { expires: 1 });
-      router.push('/dashboard');
+      Cookies.set('token', response.data.access_token, {
+        expires: 1,
+        path: '/',
+        sameSite: 'lax',
+      });
+      window.location.assign('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid credentials');
     } finally {
