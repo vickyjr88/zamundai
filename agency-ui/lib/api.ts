@@ -1,8 +1,13 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
+const defaultApiUrl =
+  process.env.NODE_ENV === "production"
+    ? "https://zamundai-api.capitalos.cloud"
+    : "http://localhost:6100";
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:6100",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || defaultApiUrl,
 });
 
 api.interceptors.request.use((config) => {
