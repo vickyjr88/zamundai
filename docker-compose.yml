@@ -51,6 +51,7 @@ services:
     env_file:
       - ./agency-api/.env
     environment:
+      OPENCLAW_DEFAULT_MODEL: ${OPENCLAW_DEFAULT_MODEL:-openrouter/auto}
       OPENCLAW_REQUIRE_PAIRING: "false"
       OPENCLAW_TRUSTED_PROXIES: "127.0.0.1,agency-api,backend"
     volumes:

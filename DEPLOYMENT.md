@@ -100,6 +100,48 @@ docker compose exec -T agency-openclaw sh -lc "openclaw devices approve <request
 - `/jobs/execute` returns OpenClaw output
 - OpenClaw logs show no auth/provider errors
 
+## 8.1 Fix Provider Auth Fallback (OpenAI Key Missing)
+
+If OpenClaw logs show this error:
+
+```text
+FailoverError: No API key found for provider "openai"
+Auth store: /home/node/.openclaw/agents/main/agent/auth-profiles.json
+```
+
+the gateway is using a persisted agent/auth profile that is not aligned with OpenRouter.
+
+1. Confirm your runtime secrets are present in `agency-api/.env`:
+	- `OPENROUTER_API_KEY=<real key>`
+	- `OPENCLAW_DEFAULT_MODEL=openrouter/auto`
+2. Re-apply runtime config:
+
+```bash
+OPENCLAW_URL=http://127.0.0.1:18789 \
+OPENCLAW_DEFAULT_MODEL=openrouter/auto \
+OPENCLAW_ALLOWED_ORIGINS_JSON='["https://openclaw.your-domain.com"]' \
+./scripts/configure-openclaw.sh
+```
+
+3. Restart OpenClaw:
+
+```bash
+docker compose restart agency-openclaw
+```
+
+4. If the error persists, remove stale per-agent auth profile so the agent can use current OpenRouter settings:
+
+```bash
+docker compose exec -u root -T agency-openclaw sh -lc "rm -f /home/node/.openclaw/agents/main/agent/auth-profiles.json && chown -R node:node /home/node/.openclaw"
+docker compose restart agency-openclaw
+```
+
+5. Re-test and verify logs:
+
+```bash
+docker compose logs --tail=120 agency-openclaw
+```
+
 ## 9. Rollback Strategy
 
 - Roll back container image tags

@@ -99,6 +99,66 @@ Production checklist:
 4. Set `OPENCLAW_HOST_PORT` if production should publish the gateway on a host port other than `18790`.
 5. Set `OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS_JSON` to the exact browser origins that should be able to open the dashboard in each environment.
 
+### Troubleshooting: Pairing and Permissions
+
+If API requests fail with a pairing error like:
+
+```json
+{
+  "message": "OpenClaw Gateway requires device pairing before the API can run jobs...",
+  "statusCode": 503
+}
+```
+
+approve the pending device request:
+
+```bash
+docker compose exec -T agency-openclaw sh -lc "openclaw devices list --json"
+docker compose exec -T agency-openclaw sh -lc "openclaw devices approve <requestId> --json"
+docker compose exec -T agency-openclaw sh -lc "openclaw devices list --json"
+```
+
+If requests fail with a file permission error like:
+
+```text
+EACCES: permission denied, open '/home/node/.openclaw/workspace/AGENTS.md'
+```
+
+repair ownership and permissions for the persisted OpenClaw data path, then restart:
+
+```bash
+docker compose exec -u root -T agency-openclaw sh -lc 'mkdir -p /home/node/.openclaw/workspace && touch /home/node/.openclaw/workspace/AGENTS.md && chown -R node:node /home/node/.openclaw && chmod -R u+rwX,g+rX /home/node/.openclaw'
+docker compose restart agency-openclaw agency-api
+```
+
+To avoid repeated pairing and permission regressions:
+
+1. Keep `/home/node/.openclaw` persisted for `agency-openclaw`.
+2. Keep `/app/.openclaw` persisted for `agency-api`.
+3. Avoid running maintenance commands as `root` against `/home/node/.openclaw` unless you restore ownership to `node:node`.
+
+If OpenClaw logs show a provider fallback error like:
+
+```text
+FailoverError: No API key found for provider "openai"
+Auth store: /home/node/.openclaw/agents/main/agent/auth-profiles.json
+```
+
+apply OpenRouter configuration and clear stale per-agent auth profile:
+
+```bash
+OPENCLAW_URL=http://127.0.0.1:18789 \
+OPENCLAW_DEFAULT_MODEL=openrouter/auto \
+OPENCLAW_ALLOWED_ORIGINS_JSON='["https://openclaw.your-dashboard-origin"]' \
+../scripts/configure-openclaw.sh
+
+docker compose restart agency-openclaw
+docker compose exec -u root -T agency-openclaw sh -lc "rm -f /home/node/.openclaw/agents/main/agent/auth-profiles.json && chown -R node:node /home/node/.openclaw"
+docker compose restart agency-openclaw
+```
+
+Also ensure `OPENROUTER_API_KEY` and `OPENCLAW_DEFAULT_MODEL=openrouter/auto` are set in your runtime `.env`.
+
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
 ```bash
