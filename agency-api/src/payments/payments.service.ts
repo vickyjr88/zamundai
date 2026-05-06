@@ -47,7 +47,7 @@ export class PaymentsService {
 
     const callbackUrl =
       this.configService.get<string>('PAYSTACK_CALLBACK_URL') ||
-      `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:6001')}/dashboard/profile?payment=callback`;
+      `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:6001')}/profile?payment=callback`;
 
     const payload = {
       email: user.email,

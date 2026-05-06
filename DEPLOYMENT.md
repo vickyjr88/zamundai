@@ -25,7 +25,7 @@ Set these in your deployment secret store (not in git):
 
 Paystack-related optional setting:
 
-- `PAYSTACK_CALLBACK_URL` (if omitted, API uses `${FRONTEND_URL}/dashboard/profile?payment=callback`)
+- `PAYSTACK_CALLBACK_URL` (if omitted, API uses `${FRONTEND_URL}/profile?payment=callback`)
 
 Recommended runtime setting for API-to-gateway waits:
 
@@ -122,7 +122,7 @@ API routes:
 
 1. Set `PAYSTACK_SECRET_KEY` in `agency-api/.env` (or your secret store).
 2. Set callback URL in Paystack dashboard:
-	- If using default callback behavior, set frontend URL to `/dashboard/profile?payment=callback`
+	- If using default callback behavior, set frontend URL to `/profile?payment=callback`
 	- Or configure `PAYSTACK_CALLBACK_URL` explicitly.
 3. Configure webhook URL in Paystack dashboard:
 	- `https://<your-api-domain>/payments/webhook`
