@@ -23,6 +23,10 @@ Set these in your deployment secret store (not in git):
 - `PAYSTACK_SECRET_KEY`
 - `BREVO_API_KEY`
 
+Paystack-related optional setting:
+
+- `PAYSTACK_CALLBACK_URL` (if omitted, API uses `${FRONTEND_URL}/dashboard/profile?payment=callback`)
+
 Recommended runtime setting for API-to-gateway waits:
 
 - `OPENCLAW_GATEWAY_TIMEOUT_MS=90000` (or higher for long-running model/tool calls)
@@ -103,6 +107,33 @@ docker compose exec -T agency-openclaw sh -lc "openclaw devices approve <request
 - UI can call API without CORS failures
 - `/jobs/execute` returns OpenClaw output
 - OpenClaw logs show no auth/provider errors
+
+## 8.4 Paystack Integration Setup and Verification
+
+This stack supports Paystack redirect payments with server-side webhook verification and credit top-up.
+
+API routes:
+
+- `POST /payments/initiate` (JWT required)
+- `POST /payments/webhook` (Paystack server callback, signature verified)
+- `GET /payments/verify/:reference` (JWT required, manual verify fallback)
+
+### Required Paystack settings
+
+1. Set `PAYSTACK_SECRET_KEY` in `agency-api/.env` (or your secret store).
+2. Set callback URL in Paystack dashboard:
+	- If using default callback behavior, set frontend URL to `/dashboard/profile?payment=callback`
+	- Or configure `PAYSTACK_CALLBACK_URL` explicitly.
+3. Configure webhook URL in Paystack dashboard:
+	- `https://<your-api-domain>/payments/webhook`
+
+### Verification checklist
+
+1. Initiate payment from UI profile page and confirm redirect to Paystack checkout.
+2. Complete payment in test mode.
+3. Confirm webhook delivery succeeded in Paystack dashboard.
+4. Verify user credits increased in profile after refresh.
+5. Optional: run manual verification endpoint with the Paystack reference if webhook delivery was delayed.
 
 ## 8.1 Fix Provider Auth Fallback (OpenAI Key Missing)
 

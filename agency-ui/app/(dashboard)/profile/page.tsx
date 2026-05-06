@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [paymentNotice, setPaymentNotice] = useState('');
   const [form, setForm] = useState({
     name: '',
     mobileNumber: '',
@@ -51,6 +52,33 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchProfile();
+
+    const maybeVerifyPayment = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const reference = params.get('reference') || params.get('trxref');
+      if (!reference) {
+        return;
+      }
+
+      try {
+        const res = await api.get(`/payments/verify/${reference}`);
+        if (res.data?.success) {
+          setPaymentNotice('Payment confirmed and credits updated.');
+          fetchProfile();
+        } else {
+          setPaymentNotice('Payment verification is pending. Please refresh shortly.');
+        }
+      } catch {
+        setPaymentNotice('Unable to verify payment automatically. Credits will update after webhook confirmation.');
+      } finally {
+        params.delete('reference');
+        params.delete('trxref');
+        const next = params.toString();
+        window.history.replaceState(null, '', next ? `${window.location.pathname}?${next}` : window.location.pathname);
+      }
+    };
+
+    void maybeVerifyPayment();
   }, []);
 
   const onCancelEdit = () => {
@@ -186,6 +214,12 @@ export default function ProfilePage() {
           <p className="text-gray-600 text-xs mb-6">
             Each agent task costs approximately 1 credit per 100 tokens
           </p>
+
+          {paymentNotice && (
+            <div className="bg-green-900/30 border border-green-700/50 text-green-200 text-xs rounded-lg px-3 py-2 mb-4">
+              {paymentNotice}
+            </div>
+          )}
 
           <TopUpButton />
         </div>

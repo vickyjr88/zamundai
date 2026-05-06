@@ -54,6 +54,34 @@ Agent runs are executed asynchronously:
 
 This allows long-running tasks (including multi-minute tool runs) without holding open HTTP requests.
 
+## Payments (Paystack)
+
+Paystack integration is handled by the API and used by the dashboard top-up flow.
+
+Endpoints:
+
+1. `POST /payments/initiate` (JWT required)
+  - Body: `{ "amount": <amount_in_kobo> }`
+  - Returns Paystack `authorization_url`, `access_code`, and `reference`.
+2. `POST /payments/webhook` (no JWT)
+  - Verifies `x-paystack-signature` against raw request body.
+  - Applies credits when `charge.success` event is received.
+3. `GET /payments/verify/:reference` (JWT required)
+  - Manual verification fallback if webhook is delayed.
+
+Required env vars:
+
+- `PAYSTACK_SECRET_KEY`
+- `FRONTEND_URL` (used for callback default)
+- Optional: `PAYSTACK_CALLBACK_URL`
+
+Setup steps:
+
+1. Add `PAYSTACK_SECRET_KEY` to runtime secrets.
+2. Set Paystack webhook URL to `https://<api-domain>/payments/webhook`.
+3. Set callback URL to your frontend profile route (or set `PAYSTACK_CALLBACK_URL`).
+4. Restart API.
+
 ## Run tests
 
 ```bash

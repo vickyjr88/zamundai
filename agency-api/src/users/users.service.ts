@@ -138,4 +138,8 @@ export class UsersService {
   async deductCredits(userId: string, amount: number): Promise<void> {
     await this.userRepository.decrement({ id: userId }, 'creditBalance', amount);
   }
+
+  async addCredits(userId: string, amount: number): Promise<void> {
+    await this.userRepository.increment({ id: userId }, 'creditBalance', amount);
+  }
 }
