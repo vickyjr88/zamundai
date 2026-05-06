@@ -53,7 +53,19 @@ export class UsersService {
     return user || undefined;
   }
 
-  async update(id: string, updateData: Partial<User>): Promise<void> {
+  async update(
+    id: string,
+    updateData: {
+      telegramId?: string;
+      name?: string;
+      mobileNumber?: string;
+      email?: string;
+      password?: string;
+      resetPasswordToken?: string | null;
+      creditBalance?: number;
+      paystackCustomerId?: string;
+    },
+  ): Promise<void> {
     if (updateData.password) {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
