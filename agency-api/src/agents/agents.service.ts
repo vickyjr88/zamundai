@@ -69,7 +69,8 @@ export class AgentsService {
   constructor(private readonly configService: ConfigService) {
     const rawGatewayUrl =
       this.configService.getOrThrow<string>('OPENCLAW_API_URL');
-    const configuredToken = this.resolveGatewayToken();
+    const resolvedToken = this.resolveGatewayToken();
+    const configuredToken = resolvedToken?.token;
 
     if (!configuredToken) {
       throw new Error(
@@ -103,20 +104,36 @@ export class AgentsService {
       'OPENCLAW_GATEWAY_IDENTITY_PATH',
       join(process.cwd(), '.openclaw', 'device.json'),
     );
+
+    this.logger.log(
+      `OpenClaw Gateway auth configured (url=${this.gatewayUrl}, tokenSource=${resolvedToken?.source ?? 'unknown'}, tokenLength=${configuredToken.length})`,
+    );
   }
 
-  private resolveGatewayToken(): string | null {
-    const candidates = [
-      this.configService.get<string>('OPENCLAW_GATEWAY_TOKEN'),
-      this.configService.get<string>('OPENCLAW_GATEWAY_AUTH_TOKEN'),
-      this.configService.get<string>('OPENCLAW_API_KEY'),
+  private resolveGatewayToken(): { token: string; source: string } | null {
+    const candidates: Array<{ key: string; value: string | undefined }> = [
+      {
+        key: 'OPENCLAW_GATEWAY_TOKEN',
+        value: this.configService.get<string>('OPENCLAW_GATEWAY_TOKEN'),
+      },
+      {
+        key: 'OPENCLAW_GATEWAY_AUTH_TOKEN',
+        value: this.configService.get<string>('OPENCLAW_GATEWAY_AUTH_TOKEN'),
+      },
+      {
+        key: 'OPENCLAW_API_KEY',
+        value: this.configService.get<string>('OPENCLAW_API_KEY'),
+      },
     ];
 
     for (const candidate of candidates) {
-      const token = this.sanitizeToken(candidate);
+      const token = this.sanitizeToken(candidate.value);
 
       if (token) {
-        return token;
+        return {
+          token,
+          source: candidate.key,
+        };
       }
     }
 
