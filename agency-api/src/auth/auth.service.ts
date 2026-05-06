@@ -40,6 +40,29 @@ export class AuthService {
     return profile;
   }
 
+  async updateMe(
+    userId: string,
+    updateData: {
+      name?: string;
+      mobileNumber?: string;
+    },
+  ) {
+    const { name, mobileNumber } = updateData;
+
+    const updatedUser = await this.usersService.updateProfile(userId, {
+      name,
+      mobileNumber,
+    });
+
+    const { password, resetPasswordToken, ...profile } = updatedUser as any;
+    return profile;
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    await this.usersService.changePassword(userId, currentPassword, newPassword);
+    return { success: true };
+  }
+
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmailOrMobile(email);
     if (!user) return; // Silent return for security

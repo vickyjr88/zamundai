@@ -81,6 +81,55 @@ export class UsersService {
     return user || undefined;
   }
 
+  async updateProfile(userId: string, updateData: { name?: string; mobileNumber?: string }): Promise<User> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (updateData.name !== undefined) {
+      const trimmedName = String(updateData.name).trim();
+      if (!trimmedName) {
+        throw new BadRequestException('Name cannot be empty');
+      }
+      user.name = trimmedName;
+    }
+
+    if (updateData.mobileNumber !== undefined) {
+      const trimmedMobile = String(updateData.mobileNumber).trim();
+      if (!trimmedMobile) {
+        throw new BadRequestException('Mobile number cannot be empty');
+      }
+
+      const existing = await this.userRepository.findOne({ where: { mobileNumber: trimmedMobile } });
+      if (existing && existing.id !== userId) {
+        throw new ConflictException('Mobile number is already in use');
+      }
+      user.mobileNumber = trimmedMobile;
+    }
+
+    return this.userRepository.save(user);
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.password);
+    if (!matches) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      throw new BadRequestException('New password must be at least 6 characters');
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.save(user);
+  }
+
   async hasSufficientCredits(userId: string, threshold = 1): Promise<boolean> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     return user ? Number(user.creditBalance) >= threshold : false;
