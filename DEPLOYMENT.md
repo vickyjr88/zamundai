@@ -1,6 +1,7 @@
 # AI Agency Deployment Guide
 
 This repository is a single monorepo containing:
+
 - `agency-api` (NestJS backend)
 - `agency-ui` (Next.js frontend)
 - OpenClaw runtime/config scripts and workspace skills
@@ -73,6 +74,7 @@ docker compose logs --tail=80 agency-openclaw
 ```
 
 Expected:
+
 - Tender skills appear as `ready`
 - Agent model resolves to OpenRouter-backed model
 

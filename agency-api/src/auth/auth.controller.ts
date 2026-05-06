@@ -1,5 +1,6 @@
-import { Controller, Post, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Request, UnauthorizedException, BadRequestException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -30,5 +31,11 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body('token') token: string, @Body('password') pass: string) {
     return this.authService.resetPassword(token, pass);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async me(@Request() req: any) {
+    return this.authService.getMe(req.user.id);
   }
 }

@@ -72,6 +72,11 @@ export class UsersService {
     return user;
   }
 
+  async findById(id: string): Promise<User | undefined> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    return user || undefined;
+  }
+
   async hasSufficientCredits(userId: string, threshold = 1): Promise<boolean> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     return user ? Number(user.creditBalance) >= threshold : false;

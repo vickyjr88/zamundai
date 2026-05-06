@@ -1,0 +1,326 @@
+'use client';
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Paperclip, Send, X, Hash } from 'lucide-react';
+import api from '@/lib/api';
+
+const SLASH_COMMANDS = [
+  {
+    cmd: '/tender-document-summary',
+    description: 'Summarise a tender document into key sections',
+  },
+  {
+    cmd: '/tender-bid-response-checklist',
+    description: 'Generate a bid response checklist from a tender summary',
+  },
+];
+
+type Message = {
+  id: number;
+  role: 'user' | 'assistant' | 'error';
+  content: string;
+  attachment?: string;
+};
+
+export default function ChatPage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashFilter, setSlashFilter] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    // Auto-resize textarea
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+
+    // Detect slash command at end of input
+    const slashMatch = value.match(/(\/\S*)$/);
+    if (slashMatch) {
+      setSlashFilter(slashMatch[1]);
+      setShowSlashMenu(true);
+    } else {
+      setShowSlashMenu(false);
+      setSlashFilter('');
+    }
+  };
+
+  const selectSlashCommand = useCallback(
+    (cmd: string) => {
+      // Replace trailing /... with selected command
+      const replaced = input.replace(/(\/\S*)$/, cmd);
+      setInput(replaced !== input ? replaced : cmd);
+      setShowSlashMenu(false);
+      setSlashFilter('');
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    },
+    [input],
+  );
+
+  const filteredCommands = SLASH_COMMANDS.filter((c) =>
+    c.cmd.startsWith(slashFilter),
+  );
+
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    // Plain text formats — read directly in the browser
+    if (ext === 'txt' || ext === 'md' || ext === 'csv') {
+      const text = await file.text();
+      setAttachment({ name: file.name, text });
+      return;
+    }
+
+    // PDF / DOCX — send to backend for extraction
+    if (ext === 'pdf' || ext === 'docx') {
+      setUploading(true);
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await api.post('/jobs/extract-document', form);
+        setAttachment({ name: file.name, text: res.data.text });
+      } catch {
+        setAttachment({ name: file.name, text: `[Attached: ${file.name}]` });
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
+    alert('Supported formats: PDF, DOCX, TXT, MD, CSV');
+  };
+
+  const handleSend = async () => {
+    if ((!input.trim() && !attachment) || loading) return;
+
+    let fullPrompt = input.trim();
+    if (attachment) {
+      fullPrompt = fullPrompt
+        ? `${fullPrompt}\n\n--- Document: ${attachment.name} ---\n${attachment.text}`
+        : `--- Document: ${attachment.name} ---\n${attachment.text}`;
+    }
+
+    const userMsg: Message = {
+      id: Date.now(),
+      role: 'user',
+      content: input.trim() || `Analyse: ${attachment!.name}`,
+      attachment: attachment?.name,
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    setAttachment(null);
+    setLoading(true);
+
+    try {
+      const res = await api.post('/jobs/execute', { prompt: fullPrompt });
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now(), role: 'assistant', content: res.data.output },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          role: 'error',
+          content: 'Something went wrong. Please try again.',
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape') {
+      setShowSlashMenu(false);
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!showSlashMenu) handleSend();
+      if (showSlashMenu && filteredCommands.length > 0) {
+        selectSlashCommand(filteredCommands[0].cmd);
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="border-b border-gray-800 px-6 py-4 flex-shrink-0">
+        <h1 className="text-white font-semibold text-base">AI Assistant</h1>
+        <p className="text-gray-500 text-xs mt-0.5">
+          Type <span className="font-mono bg-gray-800 px-1 rounded text-gray-300">/</span> to summon a skill · Attach tender documents with the paperclip
+        </p>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mb-4 border border-gray-700">
+              <Hash size={28} className="text-blue-400" />
+            </div>
+            <p className="text-gray-300 font-medium text-lg">Ready to assist</p>
+            <p className="text-gray-600 text-sm mt-2 max-w-xs leading-relaxed">
+              Attach a tender document and use{' '}
+              <span className="font-mono text-blue-400">/tender-document-summary</span> or{' '}
+              <span className="font-mono text-blue-400">/tender-bid-response-checklist</span>
+            </p>
+          </div>
+        )}
+
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[78%] rounded-2xl px-4 py-3 ${
+                msg.role === 'user'
+                  ? 'bg-blue-600 text-white rounded-br-sm'
+                  : msg.role === 'error'
+                    ? 'bg-red-950 border border-red-800/60 text-red-300 rounded-bl-sm'
+                    : 'bg-gray-800 text-gray-100 border border-gray-700/50 rounded-bl-sm'
+              }`}
+            >
+              {msg.attachment && (
+                <div className="flex items-center gap-1.5 text-xs opacity-60 mb-2 pb-2 border-b border-current/20">
+                  <Paperclip size={11} />
+                  <span className="truncate max-w-[200px]">{msg.attachment}</span>
+                </div>
+              )}
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-gray-800 border border-gray-700/50 rounded-2xl rounded-bl-sm px-5 py-3 flex items-center gap-1.5 text-gray-400 text-sm">
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+              <span className="ml-2">Working…</span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input area */}
+      <div className="border-t border-gray-800 p-4 flex-shrink-0">
+        {/* Attachment pill */}
+        {attachment && (
+          <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 mb-2 text-sm text-gray-300">
+            <Paperclip size={13} className="text-blue-400 flex-shrink-0" />
+            <span className="flex-1 truncate text-xs">{attachment.name}</span>
+            <button
+              onClick={() => setAttachment(null)}
+              className="text-gray-500 hover:text-white transition-colors flex-shrink-0"
+              aria-label="Remove attachment"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        )}
+
+        {/* Slash command menu */}
+        <div className="relative">
+          {showSlashMenu && filteredCommands.length > 0 && (
+            <div className="absolute bottom-full mb-2 left-0 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden z-10 w-full max-w-md">
+              <div className="px-3 py-2 border-b border-gray-700">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Skills</p>
+              </div>
+              {filteredCommands.map((c) => (
+                <button
+                  key={c.cmd}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    selectSlashCommand(c.cmd);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors flex flex-col gap-0.5"
+                >
+                  <span className="text-blue-400 text-sm font-mono font-semibold">{c.cmd}</span>
+                  <span className="text-gray-400 text-xs">{c.description}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Composer */}
+          <div className="flex items-end gap-2 bg-gray-800 rounded-2xl border border-gray-700 px-3 py-2 focus-within:border-gray-600 transition-colors">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || loading}
+              title="Attach document (PDF, DOCX, TXT)"
+              className="p-1.5 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-gray-700 flex-shrink-0 self-end mb-0.5 disabled:opacity-40"
+            >
+              {uploading ? (
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
+                </svg>
+              ) : (
+                <Paperclip size={17} />
+              )}
+            </button>
+
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              disabled={loading}
+              rows={1}
+              className="flex-1 bg-transparent text-white placeholder-gray-600 resize-none focus:outline-none text-sm py-1.5 leading-relaxed"
+              placeholder="Type a message or / for skills…"
+              style={{ minHeight: '28px', maxHeight: '128px' }}
+            />
+
+            <button
+              onClick={handleSend}
+              disabled={loading || (!input.trim() && !attachment)}
+              className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0 self-end mb-0.5"
+              aria-label="Send"
+            >
+              <Send size={16} />
+            </button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt,.md,.csv"
+            className="hidden"
+            onChange={handleFileAttach}
+          />
+        </div>
+
+        <p className="text-xs text-gray-700 mt-2 text-center">
+          Shift+Enter for new line · Enter to send
+        </p>
+      </div>
+    </div>
+  );
+}

@@ -33,6 +33,13 @@ export class AuthService {
     return this.usersService.create(userData);
   }
 
+  async getMe(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new UnauthorizedException();
+    const { password, resetPasswordToken, ...profile } = user as any;
+    return profile;
+  }
+
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmailOrMobile(email);
     if (!user) return; // Silent return for security
