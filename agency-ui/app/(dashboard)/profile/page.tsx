@@ -131,8 +131,8 @@ function TopUpButton() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const AMOUNTS = [500, 1000, 2500, 5000];
-  const [selected, setSelected] = useState(1000);
+  const AMOUNTS = [1000, 2500, 5000, 10000];
+  const [selected, setSelected] = useState(2500);
 
   const handleTopUp = async () => {
     setLoading(true);
@@ -153,7 +153,7 @@ function TopUpButton() {
     <div className="space-y-4">
       {/* Amount selector */}
       <div>
-        <p className="text-xs text-gray-500 mb-2">Select top-up amount (ZAR)</p>
+        <p className="text-xs text-gray-500 mb-2">Select top-up amount (KES)</p>
         <div className="grid grid-cols-4 gap-2">
           {AMOUNTS.map((amt) => (
             <button
@@ -165,7 +165,7 @@ function TopUpButton() {
                   : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
               }`}
             >
-              R{amt.toLocaleString()}
+              KES {(amt / 100).toLocaleString()}
             </button>
           ))}
         </div>
@@ -184,7 +184,7 @@ function TopUpButton() {
         ) : (
           <>
             <CreditCard size={15} />
-            Top Up R{selected.toLocaleString()} via Paystack
+            Top Up KES {(selected / 100).toLocaleString()} via Paystack
           </>
         )}
       </button>

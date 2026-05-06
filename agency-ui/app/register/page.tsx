@@ -34,6 +34,11 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950 p-4">
       <div className="max-w-md w-full bg-gray-900 p-8 rounded-2xl border border-gray-800 shadow-xl">
+        <div className="text-center mb-6">
+          <Link href="/" className="text-sm text-blue-400 hover:text-blue-300">
+            ← Back to Home
+          </Link>
+        </div>
         <h2 className="text-3xl font-bold text-white text-center mb-8">Create Account</h2>
         
         {error && (

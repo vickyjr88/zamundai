@@ -5,12 +5,14 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { User } from './users/entities/user.entity';
 import { AgentJob } from './jobs/entities/agent-job.entity';
+import { ChatMessage } from './chat/entities/chat-message.entity';
 import { UsersModule } from './users/users.module';
 import { JobsModule } from './jobs/jobs.module';
 import { AgentsModule } from './agents/agents.module';
 import { BotModule } from './bot/bot.module';
 import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -26,7 +28,7 @@ import { AuthModule } from './auth/auth.module';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_DATABASE', 'agency_db'),
-        entities: [User, AgentJob],
+        entities: [User, AgentJob, ChatMessage],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         migrationsRun: configService.get<boolean>('DB_MIGRATIONS_RUN', true),
         synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
@@ -39,6 +41,7 @@ import { AuthModule } from './auth/auth.module';
     BotModule,
     MailModule,
     AuthModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

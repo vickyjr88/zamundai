@@ -50,9 +50,32 @@ export default function ChatPage() {
   const [slashFilter, setSlashFilter] = useState('');
   const [uploading, setUploading] = useState(false);
   const [jobStatusText, setJobStatusText] = useState<string>('Working...');
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load messages from persistence on mount
+  useEffect(() => {
+    const loadMessages = async () => {
+      try {
+        const res = await api.get<any[]>('/chat/messages');
+        const persistedMessages: Message[] = res.data.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          attachment: m.attachment,
+        }));
+        setMessages(persistedMessages);
+      } catch (err) {
+        console.error('Failed to load chat history:', err);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+    loadMessages();
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -165,6 +188,18 @@ export default function ChatPage() {
     };
 
     setMessages((prev) => [...prev, userMsg]);
+    
+    // Persist user message
+    try {
+      await api.post('/chat/messages', {
+        role: 'user',
+        content: userMsg.content,
+        attachment: userMsg.attachment,
+      });
+    } catch (err) {
+      console.error('Failed to save user message:', err);
+    }
+
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setAttachment(null);
@@ -179,34 +214,60 @@ export default function ChatPage() {
       const finalJob = await waitForJobCompletion(res.data.jobId);
 
       if (finalJob.status === 'COMPLETED') {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
+        const assistantMsg = {
+          id: Date.now() + 1,
+          role: 'assistant' as const,
+          content: finalJob.output || 'Task completed with no output.',
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+        
+        // Persist assistant message
+        try {
+          await api.post('/chat/messages', {
             role: 'assistant',
-            content: finalJob.output || 'Task completed with no output.',
-          },
-        ]);
+            content: assistantMsg.content,
+            jobId: res.data.jobId,
+          });
+        } catch (err) {
+          console.error('Failed to save assistant message:', err);
+        }
         return;
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
+      const errorMsg = {
+        id: Date.now() + 2,
+        role: 'error' as const,
+        content: finalJob.error || 'Task failed. Please try again.',
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      
+      // Persist error message
+      try {
+        await api.post('/chat/messages', {
           role: 'error',
-          content: finalJob.error || 'Task failed. Please try again.',
-        },
-      ]);
+          content: errorMsg.content,
+          jobId: res.data.jobId,
+        });
+      } catch (err) {
+        console.error('Failed to save error message:', err);
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
+      const errorMsg = {
+        id: Date.now() + 3,
+        role: 'error' as const,
+        content: 'Something went wrong. Please try again.',
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      
+      // Persist error message
+      try {
+        await api.post('/chat/messages', {
           role: 'error',
-          content: 'Something went wrong. Please try again.',
-        },
-      ]);
+          content: errorMsg.content,
+        });
+      } catch (err) {
+        console.error('Failed to save error message:', err);
+      }
     } finally {
       setLoading(false);
       setJobStatusText('Working...');
@@ -230,13 +291,24 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="border-b border-gray-800 px-6 py-4 flex-shrink-0">
-        <h1 className="text-white font-semibold text-base">AI Assistant</h1>
-        <p className="text-gray-500 text-xs mt-0.5">
-          Type <span className="font-mono bg-gray-800 px-1 rounded text-gray-300">/</span> to summon a skill · Attach tender documents with the paperclip
-        </p>
+        <div>
+          <h1 className="text-white font-semibold text-base">AI Assistant</h1>
+          <p className="text-gray-500 text-xs mt-0.5">
+            Type <span className="font-mono bg-gray-800 px-1 rounded text-gray-300">/</span> to summon a skill · Attach tender documents with the paperclip
+          </p>
+        </div>
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="text-sm text-blue-400 hover:text-blue-300 font-medium px-3 py-1 rounded-lg hover:bg-gray-800 transition-colors"
+        >
+          History
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+              {showHistory && (
+                <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowHistory(false)} />
+              )}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mb-4 border border-gray-700">
@@ -377,6 +449,51 @@ export default function ChatPage() {
         <p className="text-xs text-gray-700 mt-2 text-center">
           Shift+Enter for new line · Enter to send
         </p>
+        
+          {showHistory && (
+            <div className="fixed right-4 top-20 bottom-20 w-80 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl flex flex-col z-50">
+              <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
+                <h2 className="text-white font-semibold text-sm">Chat History</h2>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="text-gray-500 hover:text-white transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+                {historyLoading ? (
+                  <p className="text-gray-500 text-xs text-center py-4">Loading history...</p>
+                ) : messages.length === 0 ? (
+                  <p className="text-gray-500 text-xs text-center py-4">No messages yet</p>
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id} className="text-xs p-2 rounded-lg bg-gray-800 border border-gray-700">
+                      <span className={`font-semibold ${msg.role === 'user' ? 'text-blue-400' : msg.role === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                        {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
+                      </span>
+                      <p className="text-gray-300 mt-1 line-clamp-2">{msg.content}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="border-t border-gray-800 px-3 py-3 flex-shrink-0">
+                <button
+                  onClick={async () => {
+                    try {
+                      await api.delete('/chat/messages');
+                      setMessages([]);
+                    } catch (err) {
+                      console.error('Failed to clear history:', err);
+                    }
+                  }}
+                  className="w-full text-xs text-red-400 hover:text-red-300 py-2 rounded-lg hover:bg-red-950/30 transition-colors"
+                >
+                  Clear History
+                </button>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );
