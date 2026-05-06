@@ -27,7 +27,6 @@ services:
     env_file:
       - ./agency-api/.env
     environment:
-      OPENCLAW_API_URL: https://openclaw.capitalos.cloud
       OPENCLAW_GATEWAY_IDENTITY_PATH: /app/.openclaw/device.json
     volumes:
       - agency_api_openclaw:/app/.openclaw

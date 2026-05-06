@@ -69,13 +69,17 @@ export class AgentsService {
   constructor(private readonly configService: ConfigService) {
     const rawGatewayUrl =
       this.configService.getOrThrow<string>('OPENCLAW_API_URL');
-    const configuredToken =
-      this.configService.get<string>('OPENCLAW_GATEWAY_TOKEN') ??
-      this.configService.get<string>('OPENCLAW_API_KEY');
+    const configuredToken = this.resolveGatewayToken();
 
     if (!configuredToken) {
       throw new Error(
-        'OPENCLAW_GATEWAY_TOKEN is required for Gateway authentication',
+        'OpenClaw gateway auth token is required. Set OPENCLAW_GATEWAY_TOKEN (or OPENCLAW_GATEWAY_AUTH_TOKEN/OPENCLAW_API_KEY).',
+      );
+    }
+
+    if (configuredToken === 'replace_with_a_shared_gateway_token') {
+      throw new Error(
+        'OPENCLAW_GATEWAY_TOKEN is still set to the placeholder value. Replace it with your real shared gateway token.',
       );
     }
 
@@ -99,6 +103,40 @@ export class AgentsService {
       'OPENCLAW_GATEWAY_IDENTITY_PATH',
       join(process.cwd(), '.openclaw', 'device.json'),
     );
+  }
+
+  private resolveGatewayToken(): string | null {
+    const candidates = [
+      this.configService.get<string>('OPENCLAW_GATEWAY_TOKEN'),
+      this.configService.get<string>('OPENCLAW_GATEWAY_AUTH_TOKEN'),
+      this.configService.get<string>('OPENCLAW_API_KEY'),
+    ];
+
+    for (const candidate of candidates) {
+      const token = this.sanitizeToken(candidate);
+
+      if (token) {
+        return token;
+      }
+    }
+
+    return null;
+  }
+
+  private sanitizeToken(value: string | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return null;
+    }
+
+    // Support secrets copied with surrounding single/double quotes.
+    const unwrapped = trimmed.replace(/^(['"])(.*)\1$/, '$2').trim();
+    return unwrapped || null;
   }
 
   /**
@@ -604,11 +642,7 @@ export class AgentsService {
   }
 
   private mapOpenClawError(error: unknown, userId: string): Error {
-    if (
-      error instanceof GatewayTimeoutException ||
-      error instanceof ServiceUnavailableException ||
-      error instanceof BadGatewayException
-    ) {
+    if (this.isKnownGatewayError(error)) {
       this.logger.error(
         `OpenClaw Gateway request failed for user ${userId}: ${error.message}`,
       );
@@ -629,6 +663,14 @@ export class AgentsService {
     );
     return new ServiceUnavailableException(
       'Agent service is currently unavailable',
+    );
+  }
+
+  private isKnownGatewayError(error: unknown): error is Error {
+    return (
+      error instanceof GatewayTimeoutException ||
+      error instanceof ServiceUnavailableException ||
+      error instanceof BadGatewayException
     );
   }
 }
