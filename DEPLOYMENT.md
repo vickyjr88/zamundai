@@ -23,6 +23,10 @@ Set these in your deployment secret store (not in git):
 - `PAYSTACK_SECRET_KEY`
 - `BREVO_API_KEY`
 
+Recommended runtime setting for API-to-gateway waits:
+
+- `OPENCLAW_GATEWAY_TIMEOUT_MS=90000` (or higher for long-running model/tool calls)
+
 Use [agency-api/.env.example](agency-api/.env.example) as the variable contract.
 
 ## 3. Runtime Persistence (Critical)

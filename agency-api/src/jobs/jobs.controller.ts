@@ -1,31 +1,36 @@
 import {
+  Get,
   Controller,
   Post,
+  Param,
   Body,
+  HttpCode,
+  HttpStatus,
   UseGuards,
   UseInterceptors,
   UploadedFile,
   Request,
+  NotFoundException,
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { JobsService } from './jobs.service';
-import { AgentsService } from '../agents/agents.service';
 import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JobStatus } from './entities/agent-job.entity';
 
 @Controller('jobs')
 export class JobsController {
   constructor(
     private readonly jobsService: JobsService,
-    private readonly agentsService: AgentsService,
     private readonly usersService: UsersService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('execute')
+  @HttpCode(HttpStatus.ACCEPTED)
   async execute(@Request() req: any, @Body('prompt') prompt: string) {
     const userId = req.user.id;
 
@@ -35,18 +40,37 @@ export class JobsController {
       throw new ForbiddenException('Insufficient credits');
     }
 
-    // 2. Trigger Agent Task
-    const response = await this.agentsService.executeJob(userId, prompt);
+    if (!prompt?.trim()) {
+      throw new BadRequestException('Prompt is required');
+    }
 
-    // 3. Deduct Credits
-    const tokensUsed = response.metadata?.tokens_used || 0;
-    const creditCost = Math.max(1, Math.ceil(tokensUsed / 100));
-    await this.usersService.deductCredits(userId, creditCost);
+    const job = await this.jobsService.enqueueJob(userId, prompt.trim());
 
     return {
-      output: response.output,
-      cost: creditCost,
-      tokensUsed,
+      jobId: job.id,
+      status: job.status,
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  async getJob(@Request() req: any, @Param('id') id: string) {
+    const userId = req.user.id;
+    const job = await this.jobsService.findJobForUser(id, userId);
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    return {
+      id: job.id,
+      status: job.status,
+      output: job.status === JobStatus.COMPLETED ? job.response : null,
+      error: job.status === JobStatus.FAILED ? job.response : null,
+      tokensUsed: job.tokensUsed,
+      costInUsd: Number(job.costInUsd),
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
     };
   }
 

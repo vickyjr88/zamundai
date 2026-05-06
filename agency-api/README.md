@@ -44,6 +44,16 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Async Job Execution Flow
+
+Agent runs are executed asynchronously:
+
+1. `POST /jobs/execute` enqueues work and returns `202 Accepted` with a `jobId`.
+2. OpenClaw execution runs in the background.
+3. `GET /jobs/:id` returns `PENDING | RUNNING | COMPLETED | FAILED` and includes output only when completed.
+
+This allows long-running tasks (including multi-minute tool runs) without holding open HTTP requests.
+
 ## Run tests
 
 ```bash

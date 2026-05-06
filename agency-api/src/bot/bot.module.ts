@@ -4,7 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BotService } from './bot.service';
 import { BotLauncherService } from './bot-launcher.service';
 import { UsersModule } from '../users/users.module';
-import { AgentsModule } from '../agents/agents.module';
+import { JobsModule } from '../jobs/jobs.module';
 
 const isTelegramBotEnabled = process.env.TELEGRAM_BOT_ENABLED === 'true';
 
@@ -23,7 +23,7 @@ const isTelegramBotEnabled = process.env.TELEGRAM_BOT_ENABLED === 'true';
         ]
       : []),
     UsersModule,
-    AgentsModule,
+    JobsModule,
   ],
   providers: isTelegramBotEnabled ? [BotService, BotLauncherService] : [],
 })

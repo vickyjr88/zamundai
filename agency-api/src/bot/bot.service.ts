@@ -2,16 +2,19 @@ import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { Start, Update, Message, On, Command } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
 import { UsersService } from '../users/users.service';
-import { AgentsService } from '../agents/agents.service';
+import { JobsService } from '../jobs/jobs.service';
+import { JobStatus } from '../jobs/entities/agent-job.entity';
 
 @Update()
 @Injectable()
 export class BotService {
   private readonly logger = new Logger(BotService.name);
+  private readonly resultPollIntervalMs = 3000;
+  private readonly resultWaitTimeoutMs = 10 * 60 * 1000;
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly agentsService: AgentsService,
+    private readonly jobsService: JobsService,
   ) {}
 
   @Start()
@@ -54,18 +57,12 @@ export class BotService {
     await ctx.reply('Agent is thinking... 🧠');
 
     try {
-      // 2. Trigger Agent Task
-      const response = await this.agentsService.executeJob(user.id, text);
+      const job = await this.jobsService.enqueueJob(user.id, text);
+      await ctx.reply(`Task queued. Job ID: ${job.id}`);
 
-      // 3. Deduct Credits (Task 3 logic)
-      const tokensUsed = response.metadata?.tokens_used || 0;
-      const creditCost = Math.max(1, Math.ceil(tokensUsed / 100)); // Simple formula
-
-      await this.usersService.deductCredits(user.id, creditCost);
-
-      // 4. Send Result
-      await ctx.reply(response.output);
-      await ctx.reply(`Task completed. Cost: ${creditCost} credits.`);
+      if (ctx.chat?.id) {
+        void this.notifyWhenCompleted(ctx, ctx.chat.id, user.id, job.id);
+      }
     } catch (error) {
       const message =
         error instanceof HttpException
@@ -75,5 +72,49 @@ export class BotService {
       this.logger.error(`Error processing agent job: ${message}`);
       await ctx.reply(message);
     }
+  }
+
+  private async notifyWhenCompleted(
+    ctx: Context,
+    chatId: number,
+    userId: string,
+    jobId: string,
+  ): Promise<void> {
+    const timeoutAt = Date.now() + this.resultWaitTimeoutMs;
+
+    while (Date.now() < timeoutAt) {
+      const job = await this.jobsService.findJobForUser(jobId, userId);
+
+      if (!job) {
+        return;
+      }
+
+      if (job.status === JobStatus.COMPLETED) {
+        const creditCost = Math.max(1, Math.ceil(job.tokensUsed / 100));
+        await ctx.telegram.sendMessage(chatId, job.response ?? 'Task completed.');
+        await ctx.telegram.sendMessage(
+          chatId,
+          `Task completed. Cost: ${creditCost} credits.`,
+        );
+        return;
+      }
+
+      if (job.status === JobStatus.FAILED) {
+        await ctx.telegram.sendMessage(
+          chatId,
+          `Task failed: ${job.response ?? 'Unknown error'}`,
+        );
+        return;
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.resultPollIntervalMs),
+      );
+    }
+
+    await ctx.telegram.sendMessage(
+      chatId,
+      `Task is still running. Check status later with Job ID: ${jobId}`,
+    );
   }
 }

@@ -22,6 +22,25 @@ type Message = {
   attachment?: string;
 };
 
+type JobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+type ExecuteJobResponse = {
+  jobId: string;
+  status: JobStatus;
+};
+
+type JobResultResponse = {
+  id: string;
+  status: JobStatus;
+  output: string | null;
+  error: string | null;
+  tokensUsed: number;
+  costInUsd: number;
+};
+
+const JOB_POLL_INTERVAL_MS = 2500;
+const JOB_POLL_TIMEOUT_MS = 10 * 60 * 1000;
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -30,6 +49,7 @@ export default function ChatPage() {
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashFilter, setSlashFilter] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [jobStatusText, setJobStatusText] = useState<string>('Working...');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -129,12 +149,34 @@ export default function ChatPage() {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setAttachment(null);
     setLoading(true);
+    setJobStatusText('Queued...');
 
     try {
-      const res = await api.post('/jobs/execute', { prompt: fullPrompt });
+      const res = await api.post<ExecuteJobResponse>('/jobs/execute', {
+        prompt: fullPrompt,
+      });
+
+      const finalJob = await waitForJobCompletion(res.data.jobId);
+
+      if (finalJob.status === 'COMPLETED') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            role: 'assistant',
+            content: finalJob.output || 'Task completed with no output.',
+          },
+        ]);
+        return;
+      }
+
       setMessages((prev) => [
         ...prev,
-        { id: Date.now(), role: 'assistant', content: res.data.output },
+        {
+          id: Date.now(),
+          role: 'error',
+          content: finalJob.error || 'Task failed. Please try again.',
+        },
       ]);
     } catch {
       setMessages((prev) => [
@@ -147,7 +189,33 @@ export default function ChatPage() {
       ]);
     } finally {
       setLoading(false);
+      setJobStatusText('Working...');
     }
+  };
+
+  const waitForJobCompletion = async (jobId: string): Promise<JobResultResponse> => {
+    const deadline = Date.now() + JOB_POLL_TIMEOUT_MS;
+
+    while (Date.now() < deadline) {
+      const job = await api.get<JobResultResponse>(`/jobs/${jobId}`);
+      const status = job.data.status;
+
+      if (status === 'PENDING') {
+        setJobStatusText('Queued...');
+      }
+
+      if (status === 'RUNNING') {
+        setJobStatusText('Working...');
+      }
+
+      if (status === 'COMPLETED' || status === 'FAILED') {
+        return job.data;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS));
+    }
+
+    throw new Error('Job timed out');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -221,7 +289,7 @@ export default function ChatPage() {
               <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
               <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
               <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
-              <span className="ml-2">Working…</span>
+              <span className="ml-2">{jobStatusText}</span>
             </div>
           </div>
         )}

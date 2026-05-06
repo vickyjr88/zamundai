@@ -98,7 +98,7 @@ export class AgentsService {
       ),
     );
     this.requestTimeoutMs = Number(
-      this.configService.get<number>('OPENCLAW_GATEWAY_TIMEOUT_MS', 30000),
+      this.configService.get<number>('OPENCLAW_GATEWAY_TIMEOUT_MS', 90000),
     );
     this.identityPath = this.configService.get<string>(
       'OPENCLAW_GATEWAY_IDENTITY_PATH',
@@ -106,7 +106,7 @@ export class AgentsService {
     );
 
     this.logger.log(
-      `OpenClaw Gateway auth configured (url=${this.gatewayUrl}, tokenSource=${resolvedToken?.source ?? 'unknown'}, tokenLength=${configuredToken.length})`,
+      `OpenClaw Gateway auth configured (url=${this.gatewayUrl}, tokenSource=${resolvedToken?.source ?? 'unknown'}, tokenLength=${configuredToken.length}, timeoutMs=${this.requestTimeoutMs})`,
     );
   }
 
