@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Paperclip, Send, X, Hash } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import api from '@/lib/api';
 
 const SLASH_COMMANDS = [
@@ -24,6 +25,7 @@ type Message = {
   role: 'user' | 'assistant' | 'error';
   content: string;
   attachment?: string;
+  responseAttachments?: Array<{ name: string; url?: string; type?: string }>;
 };
 
 type JobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
@@ -334,7 +336,7 @@ export default function ChatPage() {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[88%] md:max-w-[78%] rounded-2xl px-4 py-3 ${
+              className={`max-w-[88%] md:max-w-[78%] max-h-[60vh] overflow-y-auto rounded-2xl px-4 py-3 ${
                 msg.role === 'user'
                   ? 'bg-blue-600 text-white rounded-br-sm'
                   : msg.role === 'error'
@@ -342,13 +344,80 @@ export default function ChatPage() {
                     : 'bg-gray-800 text-gray-100 border border-gray-700/50 rounded-bl-sm'
               }`}
             >
-              {msg.attachment && (
+              {msg.attachment && msg.role === 'user' && (
                 <div className="flex items-center gap-1.5 text-xs opacity-60 mb-2 pb-2 border-b border-current/20">
                   <Paperclip size={11} />
                   <span className="truncate max-w-[200px]">{msg.attachment}</span>
                 </div>
               )}
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+              {msg.responseAttachments && msg.responseAttachments.length > 0 && (
+                <div className="mb-3 pb-3 border-b border-current/20">
+                  <p className="text-xs opacity-60 mb-2">📎 Attachments:</p>
+                  <div className="space-y-1">
+                    {msg.responseAttachments.map((att, idx) => (
+                      <div key={idx} className="flex items-center gap-2 bg-gray-900/50 rounded px-2 py-1">
+                        <Paperclip size={12} className="flex-shrink-0" />
+                        <a
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-400 hover:text-blue-300 underline truncate"
+                        >
+                          {att.name}
+                        </a>
+                        {att.type && <span className="text-xs text-gray-500 flex-shrink-0">({att.type})</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {msg.role === 'user' || msg.role === 'error' ? (
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+              ) : (
+                <div className="max-w-full">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({node, ...props}: any) => <h1 className="text-lg font-bold mb-3 text-white" {...props} />,
+                      h2: ({node, ...props}: any) => <h2 className="text-base font-bold mb-2 text-white mt-4" {...props} />,
+                      h3: ({node, ...props}: any) => <h3 className="text-sm font-bold mb-2 text-gray-100 mt-3" {...props} />,
+                      h4: ({node, ...props}: any) => <h4 className="text-sm font-semibold mb-2 text-gray-200" {...props} />,
+                      p: ({node, ...props}: any) => <p className="mb-2 leading-relaxed text-sm" {...props} />,
+                      ul: ({node, ...props}: any) => <ul className="list-disc list-inside mb-2 space-y-1 ml-2" {...props} />,
+                      ol: ({node, ...props}: any) => <ol className="list-decimal list-inside mb-2 space-y-1 ml-2" {...props} />,
+                      li: ({node, ...props}: any) => <li className="text-gray-100 text-sm" {...props} />,
+                      blockquote: ({node, ...props}: any) => (
+                        <blockquote className="border-l-4 border-blue-400 pl-3 mb-2 italic text-gray-300 text-sm" {...props} />
+                      ),
+                      code: ({node, inline, ...props}: any) =>
+                        inline ? (
+                          <code className="bg-gray-900 text-green-300 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />
+                        ) : (
+                          <code className="bg-gray-900 text-green-300 block p-2 rounded mb-2 overflow-x-auto font-mono text-xs" {...props} />
+                        ),
+                      pre: ({node, ...props}: any) => (
+                        <pre className="bg-gray-900 p-2 rounded mb-2 overflow-x-auto text-xs border border-gray-700" {...props} />
+                      ),
+                      table: ({node, ...props}: any) => (
+                        <table className="border-collapse border border-gray-600 mb-2 text-xs w-full" {...props} />
+                      ),
+                      th: ({node, ...props}: any) => (
+                        <th className="border border-gray-600 bg-gray-900 px-2 py-1 text-left text-gray-100 font-semibold" {...props} />
+                      ),
+                      td: ({node, ...props}: any) => (
+                        <td className="border border-gray-600 px-2 py-1 text-gray-200" {...props} />
+                      ),
+                      a: ({node, ...props}: any) => <a className="text-blue-400 hover:text-blue-300 underline text-sm" {...props} />,
+                      strong: ({node, ...props}: any) => <strong className="font-bold text-gray-100" {...props} />,
+                      em: ({node, ...props}: any) => <em className="italic text-gray-300" {...props} />,
+                      img: ({node, ...props}: any) => (
+                        <img className="max-w-full h-auto rounded-lg my-2 border border-gray-600" alt="Response content" {...props} />
+                      ),
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
+              )}
             </div>
           </div>
         ))}
