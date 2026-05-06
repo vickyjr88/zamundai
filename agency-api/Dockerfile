@@ -20,4 +20,4 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 6100
 
-CMD ["node", "dist/main"]
+CMD ["sh", "-c", "node dist/main.js || node dist/src/main.js"]
