@@ -34,6 +34,9 @@ export class User {
   @Column({ nullable: true })
   paystackCustomerId: string;
 
+  @Column({ type: 'boolean', default: false })
+  isAdmin: boolean;
+
   @OneToMany(() => AgentJob, (job) => job.user)
   jobs: AgentJob[];
 

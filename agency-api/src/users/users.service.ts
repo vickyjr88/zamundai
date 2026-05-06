@@ -64,6 +64,7 @@ export class UsersService {
       resetPasswordToken?: string | null;
       creditBalance?: number;
       paystackCustomerId?: string;
+      isAdmin?: boolean;
     },
   ): Promise<void> {
     if (updateData.password) {
@@ -153,5 +154,32 @@ export class UsersService {
 
   async addCredits(userId: string, amount: number): Promise<void> {
     await this.userRepository.increment({ id: userId }, 'creditBalance', amount);
+  }
+
+  async setAdminRole(userId: string, isAdmin: boolean): Promise<User> {
+    await this.userRepository.update(userId, { isAdmin });
+    const updated = await this.findById(userId);
+    if (!updated) {
+      throw new BadRequestException('User not found');
+    }
+    return updated;
+  }
+
+  async adjustCredits(userId: string, delta: number): Promise<User> {
+    if (!Number.isFinite(delta) || delta === 0) {
+      throw new BadRequestException('delta must be a non-zero number');
+    }
+
+    if (delta > 0) {
+      await this.userRepository.increment({ id: userId }, 'creditBalance', delta);
+    } else {
+      await this.userRepository.decrement({ id: userId }, 'creditBalance', Math.abs(delta));
+    }
+
+    const updated = await this.findById(userId);
+    if (!updated) {
+      throw new BadRequestException('User not found');
+    }
+    return updated;
   }
 }

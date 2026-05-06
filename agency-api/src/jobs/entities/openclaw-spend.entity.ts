@@ -13,13 +13,13 @@ export class OpenClawSpendEvent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('uuid')
   userId: string;
 
-  @Column({ nullable: true })
+  @Column('uuid', { nullable: true })
   jobId: string | null;
 
-  @Column({ nullable: true })
+  @Column('varchar', { nullable: true })
   runId: string | null;
 
   @Column({ default: 0 })

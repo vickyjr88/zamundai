@@ -1,17 +1,46 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, User, LogOut, Zap } from 'lucide-react';
+import { MessageSquare, User, LogOut, Zap, Shield } from 'lucide-react';
 import Cookies from 'js-cookie';
+import api from '@/lib/api';
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: MessageSquare, label: 'Chat' },
   { href: '/profile', icon: User, label: 'Profile & Credits' },
+  { href: '/admin', icon: Shield, label: 'Admin' },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    api
+      .get('/auth/me')
+      .then((res) => {
+        if (mounted) {
+          setIsAdmin(Boolean(res.data?.isAdmin));
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setIsAdmin(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const visibleNavItems = useMemo(
+    () => NAV_ITEMS.filter((item) => item.href !== '/admin' || isAdmin),
+    [isAdmin],
+  );
 
   const handleLogout = () => {
     Cookies.remove('token', { path: '/' });
@@ -32,7 +61,7 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1">
-          {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+          {visibleNavItems.map(({ href, icon: Icon, label }) => {
             const active = pathname === href;
             return (
               <Link
@@ -79,8 +108,8 @@ export default function Sidebar() {
       </div>
 
       <div className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-gray-900/95 backdrop-blur border-t border-gray-800 px-2 py-2">
-        <nav className="grid grid-cols-2 gap-2">
-          {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+        <nav className={`grid gap-2 ${visibleNavItems.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {visibleNavItems.map(({ href, icon: Icon, label }) => {
             const active = pathname === href;
             return (
               <Link
