@@ -13,6 +13,10 @@ const SLASH_COMMANDS = [
     cmd: '/tender-bid-response-checklist',
     description: 'Generate a bid response checklist from a tender summary',
   },
+  {
+    cmd: '/nse-investment-advisor',
+    description: 'Get profile-based NSE stock research and recommendations',
+  },
 ];
 
 type Message = {
@@ -318,7 +322,8 @@ export default function ChatPage() {
             <p className="text-gray-600 text-sm mt-2 max-w-xs leading-relaxed">
               Attach a tender document and use{' '}
               <span className="font-mono text-blue-400">/tender-document-summary</span> or{' '}
-              <span className="font-mono text-blue-400">/tender-bid-response-checklist</span>
+              <span className="font-mono text-blue-400">/tender-bid-response-checklist</span> or{' '}
+              <span className="font-mono text-blue-400">/nse-investment-advisor</span>
             </p>
           </div>
         )}

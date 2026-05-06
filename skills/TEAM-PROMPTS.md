@@ -57,3 +57,17 @@ If your OpenClaw UI exposes skill slash commands, use:
 ```text
 /tender-bid-response-checklist create a bid workplan with owners, due dates, dependencies, and readiness status
 ```
+
+## 4) NSE investment advisor prompt
+
+```text
+Use the nse-investment-advisor skill.
+My profile: balanced risk, 12-month horizon, medium liquidity needs, KES 500,000 portfolio, sectors preferred: banking and telecom.
+Give me today's NSE market snapshot, 3 stocks to consider, 2 to avoid, and a deep dive on Safaricom with entry range, target, stop-loss, and bull/base/bear scenarios.
+```
+
+## Slash command style pattern
+
+```text
+/nse-investment-advisor give me personalized NSE stock recommendations for my risk profile and include a full deep dive on KCB
+```
