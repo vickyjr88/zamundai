@@ -294,8 +294,8 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-gray-800 px-6 py-4 flex-shrink-0">
-        <div>
+      <div className="border-b border-gray-800 px-4 md:px-6 py-3 md:py-4 flex-shrink-0 flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-white font-semibold text-base">AI Assistant</h1>
           <p className="text-gray-500 text-xs mt-0.5">
             Type <span className="font-mono bg-gray-800 px-1 rounded text-gray-300">/</span> to summon a skill · Attach tender documents with the paperclip
@@ -309,7 +309,7 @@ export default function ChatPage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 md:py-6 space-y-4">
               {showHistory && (
                 <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowHistory(false)} />
               )}
@@ -334,7 +334,7 @@ export default function ChatPage() {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[78%] rounded-2xl px-4 py-3 ${
+              className={`max-w-[88%] md:max-w-[78%] rounded-2xl px-4 py-3 ${
                 msg.role === 'user'
                   ? 'bg-blue-600 text-white rounded-br-sm'
                   : msg.role === 'error'
@@ -366,7 +366,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-gray-800 p-4 flex-shrink-0">
+      <div className="border-t border-gray-800 p-3 md:p-4 flex-shrink-0">
         {attachment && (
           <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 mb-2 text-sm text-gray-300">
             <Paperclip size={13} className="text-blue-400 flex-shrink-0" />

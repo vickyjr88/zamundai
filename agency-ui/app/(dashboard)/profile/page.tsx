@@ -183,12 +183,12 @@ export default function ProfilePage() {
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Page header */}
-      <div className="border-b border-gray-800 px-8 py-5">
+      <div className="border-b border-gray-800 px-4 sm:px-6 md:px-8 py-4 md:py-5">
         <h1 className="text-white font-semibold text-base">Profile &amp; Credits</h1>
         <p className="text-gray-500 text-xs mt-0.5">Manage your account and credit balance</p>
       </div>
 
-      <div className="px-8 py-8 max-w-3xl space-y-6">
+      <div className="px-4 sm:px-6 md:px-8 py-5 md:py-8 max-w-3xl space-y-6">
         {/* Credit balance card */}
         <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -291,7 +291,7 @@ export default function ProfilePage() {
                   }
                 />
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <button
                     onClick={onSaveProfile}
                     disabled={saving}
@@ -406,7 +406,7 @@ function Field({
       <p className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1">{label}</p>
       <div className="flex items-center gap-2 text-gray-300 text-sm">
         <span className="text-gray-500">{icon}</span>
-        <span>{value ?? '—'}</span>
+        <span className="break-all">{value ?? '—'}</span>
       </div>
     </div>
   );
@@ -471,7 +471,7 @@ function TopUpButton() {
       {/* Amount selector */}
       <div>
         <p className="text-xs text-gray-500 mb-2">Select top-up amount (KES)</p>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {AMOUNTS.map((amt) => (
             <button
               key={amt}
