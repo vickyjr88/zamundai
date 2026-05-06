@@ -29,6 +29,18 @@ export class AgentJob {
   @Column({ type: 'decimal', precision: 10, scale: 4, default: 0 })
   costInUsd: number;
 
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+  baseCostKes: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+  billedCostKes: number;
+
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+  creditsCharged: number;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  billingMode: string | null;
+
   @Column({ type: 'text' })
   prompt: string;
 

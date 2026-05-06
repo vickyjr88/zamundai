@@ -24,6 +24,7 @@ export interface OpenClawResponse {
     tokens_used?: number;
     cost?: number;
     status?: string;
+    runId?: string;
     [key: string]: unknown;
   };
 }
@@ -401,13 +402,15 @@ export class AgentsService {
           }
 
           const tokensUsed = this.extractTokenUsage(waitPayload?.yielded);
+          const cost = this.extractCostUsd(waitPayload?.yielded);
 
           finalizeSuccess({
             output,
             metadata: {
               tokens_used: tokensUsed,
+              cost,
               status: waitPayload?.status,
-              runId: activeRunId,
+              runId: activeRunId ?? undefined,
             },
           });
         }
@@ -623,6 +626,44 @@ export class AgentsService {
 
       if (typeof usage.totalTokens === 'number') {
         return usage.totalTokens;
+      }
+    }
+
+    return undefined;
+  }
+
+  private extractCostUsd(value: unknown): number | undefined {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    const candidate = value as Record<string, unknown>;
+
+    if (typeof candidate.cost === 'number') {
+      return candidate.cost;
+    }
+
+    if (typeof candidate.cost_usd === 'number') {
+      return candidate.cost_usd;
+    }
+
+    if (typeof candidate.totalCostUsd === 'number') {
+      return candidate.totalCostUsd;
+    }
+
+    if (
+      candidate.usage &&
+      typeof candidate.usage === 'object' &&
+      candidate.usage !== null
+    ) {
+      const usage = candidate.usage as Record<string, unknown>;
+
+      if (typeof usage.cost === 'number') {
+        return usage.cost;
+      }
+
+      if (typeof usage.totalCostUsd === 'number') {
+        return usage.totalCostUsd;
       }
     }
 

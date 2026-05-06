@@ -21,6 +21,7 @@ type PaystackInitializeResponse = {
 export class PaymentsService {
   private readonly paystackBaseUrl = 'https://api.paystack.co';
   private readonly paystackSecretKey: string;
+  private readonly topupToCreditsRate: number;
 
   constructor(
     private readonly configService: ConfigService,
@@ -29,6 +30,9 @@ export class PaymentsService {
     private readonly usersService: UsersService,
   ) {
     this.paystackSecretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY', '');
+    this.topupToCreditsRate = Number(
+      this.configService.get<number>('BILLING_TOPUP_TO_CREDITS_RATE', 0.7),
+    );
   }
 
   async initiatePayment(userId: string, amountKobo: number) {
@@ -201,9 +205,13 @@ export class PaymentsService {
 
     await this.paymentRepository.save(tx);
 
-    const creditsToAdd = tx.amountKobo / 100;
+    const creditsToAdd = this.roundCredits((tx.amountKobo / 100) * this.topupToCreditsRate);
     if (creditsToAdd > 0) {
       await this.usersService.addCredits(tx.userId, creditsToAdd);
     }
+  }
+
+  private roundCredits(value: number): number {
+    return Math.round(value * 100) / 100;
   }
 }

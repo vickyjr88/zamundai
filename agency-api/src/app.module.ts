@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { User } from './users/entities/user.entity';
 import { AgentJob } from './jobs/entities/agent-job.entity';
+import { OpenClawSpendEvent } from './jobs/entities/openclaw-spend.entity';
 import { ChatMessage } from './chat/entities/chat-message.entity';
 import { PaymentTransaction } from './payments/entities/payment-transaction.entity';
 import { UsersModule } from './users/users.module';
@@ -30,7 +31,7 @@ import { PaymentsModule } from './payments/payments.module';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_DATABASE', 'agency_db'),
-        entities: [User, AgentJob, ChatMessage, PaymentTransaction],
+        entities: [User, AgentJob, OpenClawSpendEvent, ChatMessage, PaymentTransaction],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         migrationsRun: configService.get<boolean>('DB_MIGRATIONS_RUN', true),
         synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),

@@ -69,6 +69,10 @@ export class JobsController {
       error: job.status === JobStatus.FAILED ? job.response : null,
       tokensUsed: job.tokensUsed,
       costInUsd: Number(job.costInUsd),
+      baseCostKes: Number(job.baseCostKes),
+      billedCostKes: Number(job.billedCostKes),
+      creditsCharged: Number(job.creditsCharged),
+      billingMode: job.billingMode,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
     };
