@@ -7,6 +7,20 @@ user-invocable: true
 
 # Tender Bid Response Checklist
 
+## Document Input Handling
+
+When the user attaches a document, the API extracts its text and embeds it inline in the prompt using this format:
+
+```
+--- Document: filename.pdf ---
+[full extracted text]
+---
+```
+
+**The text is already present in the prompt. Do NOT say "I cannot process this file" or "no PDF model is configured".** Read the text from the inline block and use it as the tender source.
+
+If the inline content looks like a raw tender document rather than a pre-made summary, first apply the `tender-document-summary` skill to produce a summary, then use that summary to build the checklist.
+
 ## When to Use
 
 - Convert a tender summary into an execution checklist.

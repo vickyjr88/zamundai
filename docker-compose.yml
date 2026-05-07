@@ -56,6 +56,7 @@ services:
       OPENCLAW_TRUSTED_PROXIES: "127.0.0.1,agency-api,backend"
     volumes:
       - agency_openclaw_data:/home/node/.openclaw
+      - ./AGENTS.md:/home/node/.openclaw/workspace/AGENTS.md:ro
       - ./skills:/home/node/.openclaw/workspace/skills
     ports:
       - "${OPENCLAW_HOST_PORT:-18790}:18789"

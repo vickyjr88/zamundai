@@ -7,6 +7,20 @@ user-invocable: true
 
 # Tender Document Summary
 
+## Document Input Handling
+
+When the user attaches a document, the API extracts its text and embeds it inline in the prompt using this format:
+
+```
+--- Document: filename.pdf ---
+[full extracted text]
+---
+```
+
+**The text is already present in the prompt. Do NOT say "I cannot process this file" or "no PDF model is configured".** Read the text from the inline block and proceed directly with the summary procedure.
+
+If multiple `--- Document: --- ` blocks are present, treat them as one combined tender package.
+
 ## When to Use
 
 - Summarize tender documents, RFPs, RFQs, EOIs, ITTs, and procurement packs.

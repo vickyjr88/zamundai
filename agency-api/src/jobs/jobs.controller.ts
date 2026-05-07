@@ -84,6 +84,26 @@ export class JobsController {
   async extractDocument(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('No file uploaded');
 
+    const ALLOWED_MIMES = new Set([
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'text/markdown',
+      'text/csv',
+      'application/csv',
+      'application/octet-stream', // some clients send this for .csv/.txt
+      'image/png',
+      'image/jpeg',
+      'image/gif',
+      'image/webp',
+    ]);
+
+    if (!ALLOWED_MIMES.has(file.mimetype)) {
+      throw new BadRequestException(
+        `Unsupported MIME type: ${file.mimetype}. Supported: PDF, DOCX, TXT, MD, CSV, PNG, JPG, GIF, WEBP`,
+      );
+    }
+
     const ext = file.originalname.split('.').pop()?.toLowerCase();
 
     if (ext === 'txt' || ext === 'md' || ext === 'csv') {
@@ -104,6 +124,14 @@ export class JobsController {
       return { text: result.value };
     }
 
-    throw new BadRequestException('Unsupported file type. Supported: PDF, DOCX, TXT, MD, CSV');
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext ?? '')) {
+      const base64 = file.buffer.toString('base64');
+      const mimeType = file.mimetype.startsWith('image/')
+        ? file.mimetype
+        : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+      return { dataUrl: `data:${mimeType};base64,${base64}` };
+    }
+
+    throw new BadRequestException('Unsupported file type. Supported: PDF, DOCX, TXT, MD, CSV, PNG, JPG, GIF, WEBP');
   }
 }

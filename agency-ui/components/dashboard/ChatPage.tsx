@@ -25,6 +25,7 @@ type Message = {
   role: 'user' | 'assistant' | 'error';
   content: string;
   attachment?: string;
+  imageDataUrl?: string;
   responseAttachments?: Array<{ name: string; url?: string; type?: string }>;
 };
 
@@ -51,7 +52,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
+  const [attachment, setAttachment] = useState<{ name: string; text?: string; dataUrl?: string } | null>(null);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashFilter, setSlashFilter] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -139,16 +140,43 @@ export default function ChatPage() {
         const form = new FormData();
         form.append('file', file);
         const res = await api.post('/jobs/extract-document', form);
-        setAttachment({ name: file.name, text: res.data.text });
+        const extracted: string = res.data.text ?? '';
+        if (!extracted.trim()) {
+          alert(`Could not extract text from ${file.name}. The file may be scanned or image-only. Try a text-based PDF or paste the content manually.`);
+          return;
+        }
+        setAttachment({ name: file.name, text: extracted });
       } catch {
-        setAttachment({ name: file.name, text: `[Attached: ${file.name}]` });
+        alert(`Failed to process ${file.name}. Please check the file is not corrupted, or paste the document text manually.`);
       } finally {
         setUploading(false);
       }
       return;
     }
 
-    alert('Supported formats: PDF, DOCX, TXT, MD, CSV');
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext ?? '')) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`${file.name} is too large. Images must be under 5 MB.`);
+        return;
+      }
+      setUploading(true);
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        setAttachment({ name: file.name, dataUrl });
+      } catch {
+        alert(`Failed to read ${file.name}.`);
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
+    alert('Supported formats: PDF, DOCX, TXT, MD, CSV, PNG, JPG, GIF, WEBP');
   };
 
   const waitForJobCompletion = async (jobId: string): Promise<JobResultResponse> => {
@@ -181,16 +209,22 @@ export default function ChatPage() {
 
     let fullPrompt = input.trim();
     if (attachment) {
-      fullPrompt = fullPrompt
-        ? `${fullPrompt}\n\n--- Document: ${attachment.name} ---\n${attachment.text}`
-        : `--- Document: ${attachment.name} ---\n${attachment.text}`;
+      if (attachment.dataUrl) {
+        const imgBlock = `![${attachment.name}](${attachment.dataUrl})`;
+        fullPrompt = fullPrompt ? `${fullPrompt}\n\n${imgBlock}` : imgBlock;
+      } else {
+        fullPrompt = fullPrompt
+          ? `${fullPrompt}\n\n--- Document: ${attachment.name} ---\n${attachment.text}`
+          : `--- Document: ${attachment.name} ---\n${attachment.text}`;
+      }
     }
 
     const userMsg: Message = {
       id: Date.now(),
       role: 'user',
-      content: input.trim() || `Analyse: ${attachment!.name}`,
+      content: input.trim() || (attachment?.dataUrl ? `📷 ${attachment.name}` : `Analyse: ${attachment!.name}`),
       attachment: attachment?.name,
+      imageDataUrl: attachment?.dataUrl,
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -350,6 +384,18 @@ export default function ChatPage() {
                   <span className="truncate max-w-[200px]">{msg.attachment}</span>
                 </div>
               )}
+@@
+              {msg.imageDataUrl && msg.role === 'user' && (
+                <div className="mb-2">
+                  <img src={msg.imageDataUrl} alt={msg.attachment ?? 'image'} className="max-w-[180px] max-h-[130px] object-contain rounded-lg border border-white/20" />
+                </div>
+              )}
+              {msg.attachment && !msg.imageDataUrl && msg.role === 'user' && (
+                <div className="flex items-center gap-1.5 text-xs opacity-60 mb-2 pb-2 border-b border-current/20">
+                  <Paperclip size={11} />
+                  <span className="truncate max-w-[200px]">{msg.attachment}</span>
+                </div>
+              )}
               {msg.responseAttachments && msg.responseAttachments.length > 0 && (
                 <div className="mb-3 pb-3 border-b border-current/20">
                   <p className="text-xs opacity-60 mb-2">📎 Attachments:</p>
@@ -438,7 +484,11 @@ export default function ChatPage() {
       <div className="border-t border-gray-800 p-3 md:p-4 flex-shrink-0">
         {attachment && (
           <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 mb-2 text-sm text-gray-300">
-            <Paperclip size={13} className="text-blue-400 flex-shrink-0" />
+            {attachment.dataUrl ? (
+              <img src={attachment.dataUrl} alt={attachment.name} className="w-8 h-8 object-cover rounded flex-shrink-0 border border-gray-600" />
+            ) : (
+              <Paperclip size={13} className="text-blue-400 flex-shrink-0" />
+            )}
             <span className="flex-1 truncate text-xs">{attachment.name}</span>
             <button
               onClick={() => setAttachment(null)}
@@ -514,7 +564,7 @@ export default function ChatPage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.txt,.md,.csv"
+            accept=".pdf,.docx,.txt,.md,.csv,.png,.jpg,.jpeg,.gif,.webp"
             className="hidden"
             onChange={handleFileAttach}
           />
