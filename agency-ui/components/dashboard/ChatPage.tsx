@@ -291,11 +291,18 @@ export default function ChatPage() {
       } catch (err) {
         console.error('Failed to save error message:', err);
       }
-    } catch {
+    } catch (err: any) {
+      let errorContent = 'Something went wrong. Please try again.';
+      
+      // Only show "Insufficient credits" message to users
+      if (err?.response?.data?.message === 'Insufficient credits') {
+        errorContent = 'Insufficient credits';
+      }
+      
       const errorMsg = {
         id: Date.now() + 3,
         role: 'error' as const,
-        content: 'Something went wrong. Please try again.',
+        content: errorContent,
       };
       setMessages((prev) => [...prev, errorMsg]);
       

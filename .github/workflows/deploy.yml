@@ -48,14 +48,20 @@ jobs:
             git checkout "$DEPLOY_BRANCH"
             git pull origin "$DEPLOY_BRANCH"
 
-            docker compose down
+            # Clean up completely (remove orphaned containers)
+            docker compose down --remove-orphans
             docker compose up --build -d
 
             docker compose ps
 
             docker compose logs --tail=80 --no-color agency-api agency-ui agency-openclaw || true
 
+            # Wait for services to initialize before health check
+            echo "Waiting for services to initialize..."
+            sleep 15
+
             if [ -n "${HEALTHCHECK_URL:-}" ]; then
+              echo "Running health check: $HEALTHCHECK_URL"
               curl -fsS "$HEALTHCHECK_URL" >/dev/null
-              echo "Health check passed: $HEALTHCHECK_URL"
+              echo "✓ Health check passed"
             fi
