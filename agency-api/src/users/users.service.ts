@@ -1,5 +1,6 @@
 import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import * as bcrypt from 'bcrypt';
@@ -9,7 +10,20 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly configService: ConfigService,
   ) {}
+
+  private getNewUserInitialCredits(): number {
+    const configured = Number(
+      this.configService.get<number>('NEW_USER_INITIAL_CREDITS', 10),
+    );
+
+    if (!Number.isFinite(configured) || configured < 0) {
+      return 10;
+    }
+
+    return configured;
+  }
 
   async create(userData: Partial<User>): Promise<User> {
     if (!userData.name || !String(userData.name).trim()) {
@@ -31,7 +45,7 @@ export class UsersService {
     const user = this.userRepository.create({
       ...userData,
       password: hashedPassword,
-      creditBalance: 100,
+      creditBalance: this.getNewUserInitialCredits(),
     });
     return this.userRepository.save(user);
   }
@@ -82,7 +96,7 @@ export class UsersService {
         mobileNumber: mobileNumber || `tg_${telegramId}`,
         email: `tg_${telegramId}@placeholder.com`,
         password: await bcrypt.hash(randomId, 10),
-        creditBalance: 100,
+        creditBalance: this.getNewUserInitialCredits(),
       });
       user = await this.userRepository.save(user);
     }
