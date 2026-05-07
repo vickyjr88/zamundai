@@ -1,5 +1,11 @@
 name: Deploy To Server
 
+# Deployment workflow that runs automatically on push to main,
+# and can be manually triggered or rerun from the GitHub Actions UI.
+#
+# Manual trigger: Actions → Deploy To Server → Run workflow
+# Rerun deployment: Open failed run → Re-run jobs → Re-run failed jobs
+
 on:
   push:
     branches:
