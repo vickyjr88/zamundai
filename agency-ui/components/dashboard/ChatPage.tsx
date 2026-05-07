@@ -581,7 +581,7 @@ export default function ChatPage() {
         </p>
         
           {showHistory && (
-            <div className="fixed right-4 top-20 bottom-20 w-80 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl flex flex-col z-50">
+            <div className="fixed z-50 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl flex flex-col top-16 bottom-4 left-3 right-3 md:left-auto md:right-4 md:top-20 md:bottom-20 md:w-80">
               <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
                 <h2 className="text-white font-semibold text-sm">Chat History</h2>
                 <button

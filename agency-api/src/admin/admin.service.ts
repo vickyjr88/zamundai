@@ -161,6 +161,77 @@ export class AdminService {
     return { items, total, page, limit };
   }
 
+  async listOpenClawLogs(
+    page = 1,
+    limit = 20,
+    status?: string,
+    search?: string,
+    attachmentsOnly = false,
+  ) {
+    const skip = (page - 1) * limit;
+    const query = this.jobsRepository
+      .createQueryBuilder('job')
+      .leftJoinAndSelect('job.user', 'user')
+      .orderBy('job.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    if (status) {
+      query.andWhere('job.status = :status', { status });
+    }
+
+    if (attachmentsOnly) {
+      query.andWhere(
+        '(job.prompt LIKE :docMarker OR job.prompt LIKE :imageMarker)',
+        {
+          docMarker: '%--- Document:%',
+          imageMarker: '%data:image/%',
+        },
+      );
+    }
+
+    if (search?.trim()) {
+      const term = `%${search.trim()}%`;
+      query.andWhere(
+        '(job.prompt ILIKE :term OR job.response ILIKE :term OR user.email ILIKE :term)',
+        { term },
+      );
+    }
+
+    const [items, total] = await query.getManyAndCount();
+
+    return {
+      items: items.map((job) => {
+        const prompt = job.prompt ?? '';
+        return {
+          id: job.id,
+          status: job.status,
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+          user: job.user
+            ? {
+                id: job.user.id,
+                email: job.user.email,
+                name: job.user.name,
+              }
+            : null,
+          tokensUsed: job.tokensUsed,
+          costInUsd: Number(job.costInUsd),
+          billedCostKes: Number(job.billedCostKes),
+          creditsCharged: Number(job.creditsCharged),
+          billingMode: job.billingMode,
+          hasDocumentAttachment: prompt.includes('--- Document:'),
+          hasImageAttachment: prompt.includes('data:image/'),
+          prompt,
+          response: job.response,
+        };
+      }),
+      total,
+      page,
+      limit,
+    };
+  }
+
   async adjustUserCredits(userId: string, delta: number) {
     const updatedUser = await this.usersService.adjustCredits(userId, delta);
     return {

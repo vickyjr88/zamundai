@@ -67,6 +67,23 @@ export class AdminController {
     return this.adminService.listChatMessages(page ?? 1, limit ?? 20);
   }
 
+  @Get('openclaw-logs')
+  async openclawLogs(
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('attachmentsOnly', new ParseBoolPipe({ optional: true })) attachmentsOnly?: boolean,
+  ) {
+    return this.adminService.listOpenClawLogs(
+      page ?? 1,
+      limit ?? 20,
+      status,
+      search,
+      attachmentsOnly ?? false,
+    );
+  }
+
   @Patch('users/credits')
   async adjustCredits(
     @Body('userId') userId: string,
