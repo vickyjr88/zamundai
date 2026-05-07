@@ -391,7 +391,6 @@ export default function ChatPage() {
                   <span className="truncate max-w-[200px]">{msg.attachment}</span>
                 </div>
               )}
-@@
               {msg.imageDataUrl && msg.role === 'user' && (
                 <div className="mb-2">
                   <img src={msg.imageDataUrl} alt={msg.attachment ?? 'image'} className="max-w-[180px] max-h-[130px] object-contain rounded-lg border border-white/20" />
